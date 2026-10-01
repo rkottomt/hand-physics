@@ -4,26 +4,103 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Hand Physics</title>
+  <meta name="description" content="Grab, throw and stack physics objects with your bare hand using webcam hand tracking." />
+  <meta name="theme-color" content="#14161f" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✋</text></svg>" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <h1>Hand Physics</h1>
-    <p id="status">Click "Start camera" to use your hand, or just use your mouse.</p>
-    <div class="controls">
-      <button id="startCam">Start camera</button>
-      <button id="reset">Reset level</button>
+  <div id="app">
+    <header class="topbar">
+      <button id="menuBtn" class="icon-btn" title="Levels (Esc)" aria-label="Open level menu">☰</button>
+      <div class="level-info">
+        <h1 id="levelName">Hand Physics</h1>
+        <p id="levelGoal"></p>
+      </div>
+      <div class="hud">
+        <span id="timer" class="pill" title="Starts on your first grab">⏱ 0.0s</span>
+        <button id="camBtn" class="pill btn-pill" title="Turn hand tracking on/off">📷 Use hand</button>
+        <button id="muteBtn" class="icon-btn" title="Sound (M)" aria-label="Toggle sound">🔊</button>
+        <button id="helpBtn" class="icon-btn" title="How to play (H)" aria-label="How to play">?</button>
+      </div>
+    </header>
+
+    <main id="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="world" aria-label="Physics play area"></canvas>
+      <div id="handStatus" class="pill stage-pill" hidden></div>
+      <div id="levelStatus" class="stage-status"></div>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </main>
+
+    <div class="below">
+      <div class="actions">
+        <button id="restartBtn" class="secondary">↺ Restart <kbd>R</kbd></button>
+        <span id="spawnBar" hidden>
+          <button class="secondary" data-spawn="block">+ Block</button>
+          <button class="secondary" data-spawn="ball">+ Ball</button>
+          <button class="secondary" data-spawn="plank">+ Plank</button>
+          <button class="secondary" id="clearBtn">Clear</button>
+        </span>
+      </div>
+      <p id="levelTip" class="tip"></p>
     </div>
-  </header>
+  </div>
 
-  <main id="stage">
-    <!-- Mirrored webcam feed sits behind the physics canvas -->
-    <video id="video" playsinline muted></video>
-    <canvas id="world"></canvas>
-    <div id="goalText"></div>
-  </main>
+  <!-- Level menu -->
+  <section id="menu" class="overlay" aria-label="Level menu">
+    <div class="card wide">
+      <div class="hero">
+        <div class="hero-icon">✋</div>
+        <div>
+          <h1>Hand Physics</h1>
+          <p class="muted">Grab, throw and stack things with your bare hand: no controller, just your webcam.</p>
+        </div>
+      </div>
+      <div class="start-row">
+        <button id="menuCamBtn" class="primary">📷 Play with my hand</button>
+        <button id="menuMouseBtn" class="secondary">🖱️ Play with mouse / touch</button>
+      </div>
+      <h2>Levels</h2>
+      <div id="levelGrid" class="level-grid"></div>
+      <p class="muted small">🔒 Camera video is processed on your device and never uploaded.</p>
+    </div>
+  </section>
 
-  <footer>Pinch thumb + index to grab · open hand to release/throw · stack above the line for 3s to win</footer>
+  <!-- How to play -->
+  <section id="help" class="overlay" hidden aria-label="How to play">
+    <div class="card">
+      <h2>How to play</h2>
+      <div class="gestures">
+        <div class="gesture"><span>🤏</span><b>Pinch to grab</b><small>Touch thumb and index finger over a shape.</small></div>
+        <div class="gesture"><span>🖐️</span><b>Open to drop</b><small>Separate your fingers to let go.</small></div>
+        <div class="gesture"><span>💨</span><b>Swing to throw</b><small>Let go while moving and it flies.</small></div>
+        <div class="gesture"><span>🖱️</span><b>Mouse works too</b><small>Click-drag, or drag with a finger on phones.</small></div>
+      </div>
+      <ul class="tips">
+        <li>Face the camera with your palm toward it, about an arm's length away.</li>
+        <li>Good lighting helps a lot. Avoid a bright window behind you.</li>
+        <li>The blue ring shrinks as you pinch. When it turns solid, you're holding.</li>
+        <li>Keys: <kbd>R</kbd> restart · <kbd>Esc</kbd> levels · <kbd>M</kbd> sound · <kbd>H</kbd> help</li>
+      </ul>
+      <button id="helpClose" class="primary">Got it!</button>
+    </div>
+  </section>
+
+  <!-- Level complete -->
+  <section id="winModal" class="overlay" hidden aria-label="Level complete">
+    <div class="card center">
+      <h2 id="winTitle">Level complete!</h2>
+      <div id="winStars" class="stars"></div>
+      <p id="winTime" class="big"></p>
+      <p id="winBest" class="muted"></p>
+      <div class="start-row">
+        <button id="winReplay" class="secondary">↺ Replay</button>
+        <button id="winMenu" class="secondary">☰ Levels</button>
+        <button id="winNext" class="primary">Next level →</button>
+      </div>
+    </div>
+  </section>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
   <script type="module" src="js/main.js"></script>
