@@ -372,3 +372,15 @@ function toast(text, ms = 3500) {
 const fromHash = LEVELS.findIndex((l) => `#${l.id}` === location.hash);
 if (fromHash >= 0) play(fromHash);
 else { loadLevel(firstUnfinished()); buildLevelGrid(); }
+
+// Editing the #level-id in the address bar (or back/forward) switches level.
+window.addEventListener("hashchange", () => {
+  const i = LEVELS.findIndex((l) => `#${l.id}` === location.hash);
+  if (i >= 0 && i !== game.levelIndex) {
+    ["menu", "winModal"].forEach(closeOverlay);
+    loadLevel(i);
+  }
+});
+
+// Exposed for the browser tests in tests/e2e.mjs (and handy in the dev console).
+window.game = game;

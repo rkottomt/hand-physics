@@ -1,0 +1,1 @@
+hand-open.jpg: sample image from the MediaPipe project (https://storage.googleapis.com/mediapipe-tasks/gesture_recognizer/victory.jpg), Apache-2.0. Used only as a fake webcam frame in tests/e2e.mjs.

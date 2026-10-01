@@ -106,7 +106,7 @@ kbd {
 #world.pointing { cursor: pointer; }
 #world.denied { cursor: not-allowed; }
 
-.stage-pill { position: absolute; left: 12px; bottom: 12px; background: #000a; }
+.stage-pill { position: absolute; left: 12px; top: 12px; background: #000a; pointer-events: none; }
 .stage-status {
   position: absolute;
   top: 38px;
@@ -120,8 +120,8 @@ kbd {
 .toast {
   position: absolute;
   left: 50%;
-  bottom: 18px;
-  transform: translate(-50%, 20px);
+  top: 70px;
+  transform: translate(-50%, -10px);
   background: #000c;
   padding: 10px 16px;
   border-radius: 10px;

@@ -21,7 +21,7 @@ export function drawOverlay(ctx, game, view) {
     ctx.fillStyle = view.deniedFlash > 0 ? "rgba(255,77,109,0.22)" : "rgba(255,77,109,0.08)";
     ctx.fillRect(game.grabMaxX, 0, WIDTH - game.grabMaxX, HEIGHT);
     dashedLine(ctx, game.grabMaxX, 0, game.grabMaxX, HEIGHT, "#ff4d6d");
-    label(ctx, "OUT OF REACH →", game.grabMaxX + 12, 30, "#ff8fa3", "left");
+    label(ctx, "OUT OF REACH →", game.grabMaxX + 12, HEIGHT - 36, "#ff8fa3", "left");
   }
 
   // Target zones pulse gently so they read as "put it here"
