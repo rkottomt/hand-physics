@@ -1,6 +1,6 @@
 # Hand Physics ✋
 
-**Live:** _(Vercel link)_ · **Demo video:** _(link)_
+**Live:** https://hand-physics.vercel.app · **Demo video:** _(link)_
 
 <!--
   TODO (write these sections yourself, in your own words — required by the assignment):
