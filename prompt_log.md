@@ -15,58 +15,36 @@ This file is kept separate from [README.md](README.md). Prompts are copied word 
 Claude's first fix for the Balancing Act seesaw added torque scaled by the plank's inertia (`plank.torque -= plank.inertia * (...)`). Claude expected this to work, but Matter.js multiplies torque by the time step squared, so the simulation blew up to angles around 10^200 degrees and then NaN. The parameter-sweep test exposed it immediately. The fix was to adjust the plank's angular velocity directly each step (a velocity-level spring), then tune the strength in simulation.
 
 ## What I changed myself
-_(Fill in. Easy, explainable changes: PINCH_ON/PINCH_OFF in js/gesture.js, a level's layout or par time in js/levels.js, colors in style.css.)_
+I changed the colors of the UI based off what I liked from a color picker and implemented that cross all instances of the UI.
 
----
+#1 I want to create a game involving computer vision where people can interact with games using their hands, tell me what libraries and stuff I need to use to understand this
 
-## Session 1: 2026-10-01: Idea + MVP
-**Prompt 1** (with the assignment page pasted above it):
-> brainstorm ideas, let me choose one and then start building
+#2 Work on tracking my hand and give me a demo game hosted locally to determine if the tracking is working correctly
 
-**Prompt 2** (my answer when Claude asked which idea I wanted):
-> I want to do something involving webcam hand tracking, but not with music.
+#3 Let me pinch the ball to move
 
-**Prompt 3:** Claude then offered hand-tracking concepts and I picked "Hand-controlled physics toy".
+#4 For the first level develop a game where I have to pinch the ball and place it in a square and it has to stay there for a set amount of time to pass the level
 
-**Result:** Claude generated the MVP: MediaPipe Hand Landmarker (pinch detection with hysteresis) + Matter.js world,
-pinch-to-grab via a Constraint, mouse fallback, and a "stack above the line for 3s" goal.
-Files: index.html, style.css, js/hand.js, js/physics.js, js/main.js.
+#5 For the second level make there be several different colored blocks and I have to stack them up to a certain point 
 
-## Session 2: 2026-10-01: More levels, testing, deployment
-**Prompt 4:**
-> Test everything. make it more complex and very user friendly, push code regularly to git repo but do not add urself as a contributor. once you are convinced that it is deployment ready, deploy onto vercel and give me the vercel link. take your time
+#6 make a basketball themed one where I have to throw a ball into a hoop. let the walls act as a backboard sort of
 
-**What Claude did:**
-- Split the code into DOM-free game logic (`game.js`, `levels.js`, `gesture.js`) and browser UI (`main.js`, `overlay.js`, `hand.js`, `audio.js`, `progress.js`) so levels could be tested headlessly in Node.
-- Added 6 levels (First Grab, Sky Tower, Hoop Shot, Knockdown, Balancing Act, Free Play), a level menu, how-to-play help, a win screen with stars, saved progress, sound, a hand skeleton overlay, and mouse/touch fallback.
-- Wrote 30 Node tests and a Playwright browser suite. The browser suite feeds a real hand photo to Chrome as a fake webcam to test MediaPipe end to end.
-- Removed Claude's co-author line from commits as requested.
+#7 make one where I have to knock off balls off varying different level heights
 
-**Bugs the tests caught (fixed):**
-- Knockdown: the third shelf touched the right wall, so a hit target got pinned against the wall and the level could never be won.
-- Balancing Act: blocks sit above the pivot, which makes the seesaw an inverted pendulum, so even a perfectly balanced load tipped over. Added a restoring spring and tuned it with a parameter sweep so balanced loads win and lopsided loads fail.
-- Hand-status pill and toasts covered the play area (found from test screenshots).
+#8 make one where I have to properly balance blocks on a scale, ensure that the physics is proper
 
-## Session 3: 2026-10-05: Online leaderboard
-**Prompt 5:**
-> connect this to a backend such that we can keep leaderboard for whoever does itf astest. just the top 5 fastest for each level. ppl will have to input their username
+#9 make a final fun level where the user can do whatever they want, give me options of what features to include in this level
 
-**What Claude did:**
-- Added a Vercel serverless function (`api/leaderboard.mjs`) backed by Upstash Redis from the Vercel Marketplace. Each level is a Redis sorted set that keeps only the top 5, with one entry per name.
-- Win screen: shows the level's top 5. A top-5 time gets a name box (the last name is remembered). Added a 🏆 leaderboard overlay with a tab per level.
-- Server-side checks: level, name format, impossible times, and a per-IP rate limit.
-- Added a local dev server that runs the API with an in-memory database, 10 API unit tests, and browser tests for submitting and for the leaderboard being offline.
-- Creating the database needed me to accept Upstash's terms in the Vercel dashboard. After I did, I told Claude: "i approved the upstash terms".
+#10 give options the user to use their mouse instead of camera
 
-**Problem Claude spotted while building it:**
-- The game's keyboard shortcuts (R restart, H help, M mute) would have fired while typing a name like "Rohit" on the win screen. Shortcuts are now ignored while typing in a text box, and a browser test types a name containing R, H and M to check this.
+#11 the UI looks way too ai generated, use no emojis and change the overall template to a beige color
 
-## Session 4: 2026-10-05: Redesign
-**Prompt 6:**
-> make the UI less ai genereated looking and make it more natural. use less AI fonts, no emojis and a different color pallette. push everything to vercel after
+#12 include a leaderboard hosted on a database
 
-**What Claude did:**
-- Replaced the dark navy/indigo theme with a warm "graph paper" look: cream paper, ink outlines, buttons that press down, and a few print colors (mustard, vermilion, teal, cobalt).
-- Fonts: Young Serif for headings, IBM Plex Sans for text, IBM Plex Mono for numbers (previously the system font).
-- Removed every emoji. Levels are numbered (01-06), stars and the sound icon are small SVG drawings, the trophy/camera buttons became text ("Scores", "Use hand"), and the logo/favicon is a drawn stack of shapes.
-- The canvas matches: outlined shapes, a black floor, bullseye targets, and the webcam shown as a faded grayscale "photocopy" on the paper.
+#13 the physics for level 5 seems off, please fact check this
+
+#14 give an option to mute music
+
+#15 add an info question button
+
+#16 give a grid background to each game

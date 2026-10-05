@@ -5,3 +5,8 @@ node_modules/
 node_modules/
 tests/screenshots/
 .vercel
+
+# Agent skill files dropped by `vercel integration add`
+.agents/
+.claude/skills/
+skills-lock.json
