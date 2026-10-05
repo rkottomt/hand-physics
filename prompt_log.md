@@ -1,26 +1,39 @@
 # Prompt Log — Hand Physics (15-113 Project 2)
 
-## Tools used
-- Claude Code (Claude Opus 5.5): brainstorming, scaffolding, code generation.
-- (Fill in: which tool for which job, and why.)
+This file is kept separate from [README.md](README.md). Prompts are copied word for word from my Claude Code session history, typos included.
 
-## Session 1 — 2026-10-01: Idea + MVP scaffold
-**Prompt (verbatim):**
+## Which tool for which job
+| Tool | Job |
+|---|---|
+| Claude Code (Claude Opus 5.5), in the terminal | The only AI tool I used. Brainstorming the idea, writing the game code and levels, writing the tests, building the leaderboard backend, the redesign, committing to git and deploying to Vercel. |
+| MediaPipe Hand Landmarker | The ML model that finds hand landmarks in the webcam video. Runs in the browser. |
+| Matter.js | The physics engine (bodies, collisions, the grab spring). |
+| Playwright | Browser tests, including a fake webcam fed a hand photo. |
+| Vercel + Upstash Redis | Hosting, the serverless leaderboard function, and its database. |
+
+## One place AI got it wrong
+Claude's first fix for the Balancing Act seesaw added torque scaled by the plank's inertia (`plank.torque -= plank.inertia * (...)`). Claude expected this to work, but Matter.js multiplies torque by the time step squared, so the simulation blew up to angles around 10^200 degrees and then NaN. The parameter-sweep test exposed it immediately. The fix was to adjust the plank's angular velocity directly each step (a velocity-level spring), then tune the strength in simulation.
+
+## What I changed myself
+_(Fill in. Easy, explainable changes: PINCH_ON/PINCH_OFF in js/gesture.js, a level's layout or par time in js/levels.js, colors in style.css.)_
+
+---
+
+## Session 1: 2026-10-01: Idea + MVP
+**Prompt 1** (with the assignment page pasted above it):
 > brainstorm ideas, let me choose one and then start building
 
-Chose from options: wanted "webcam hand tracking, but not with music" → picked "Hand-controlled physics toy".
+**Prompt 2** (my answer when Claude asked which idea I wanted):
+> I want to do something involving webcam hand tracking, but not with music.
+
+**Prompt 3:** Claude then offered hand-tracking concepts and I picked "Hand-controlled physics toy".
 
 **Result:** Claude generated the MVP: MediaPipe Hand Landmarker (pinch detection with hysteresis) + Matter.js world,
 pinch-to-grab via a Constraint, mouse fallback, and a "stack above the line for 3s" goal.
 Files: index.html, style.css, js/hand.js, js/physics.js, js/main.js.
 
-**What I changed myself:** (fill in)
-
-## One place AI got it wrong
-(fill in as it happens)
-
 ## Session 2: 2026-10-01: More levels, testing, deployment
-**Prompt (verbatim):**
+**Prompt 4:**
 > Test everything. make it more complex and very user friendly, push code regularly to git repo but do not add urself as a contributor. once you are convinced that it is deployment ready, deploy onto vercel and give me the vercel link. take your time
 
 **What Claude did:**
@@ -34,18 +47,8 @@ Files: index.html, style.css, js/hand.js, js/physics.js, js/main.js.
 - Balancing Act: blocks sit above the pivot, which makes the seesaw an inverted pendulum, so even a perfectly balanced load tipped over. Added a restoring spring and tuned it with a parameter sweep so balanced loads win and lopsided loads fail.
 - Hand-status pill and toasts covered the play area (found from test screenshots).
 
-## One place AI got it wrong
-Claude's first fix for the seesaw added torque scaled by the plank's inertia (`plank.torque -= plank.inertia * (...)`). Claude expected this to work, but Matter.js multiplies torque by the time step squared, so the simulation blew up to angles around 10^200 degrees and then NaN. The parameter-sweep test exposed it immediately. The fix was to adjust the plank's angular velocity directly each step (a velocity-level spring), then tune the strength in simulation.
-_(Add your own examples too.)_
-
-## Which tool for which job
-_(Fill in.)_
-
-## What I changed myself
-_(Fill in. Easy, explainable changes: PINCH_ON/PINCH_OFF in js/gesture.js, a level's layout or par time in js/levels.js, colors in style.css.)_
-
 ## Session 3: 2026-10-05: Online leaderboard
-**Prompt (verbatim):**
+**Prompt 5:**
 > connect this to a backend such that we can keep leaderboard for whoever does itf astest. just the top 5 fastest for each level. ppl will have to input their username
 
 **What Claude did:**
@@ -53,12 +56,13 @@ _(Fill in. Easy, explainable changes: PINCH_ON/PINCH_OFF in js/gesture.js, a lev
 - Win screen: shows the level's top 5. A top-5 time gets a name box (the last name is remembered). Added a 🏆 leaderboard overlay with a tab per level.
 - Server-side checks: level, name format, impossible times, and a per-IP rate limit.
 - Added a local dev server that runs the API with an in-memory database, 10 API unit tests, and browser tests for submitting and for the leaderboard being offline.
+- Creating the database needed me to accept Upstash's terms in the Vercel dashboard. After I did, I told Claude: "i approved the upstash terms".
 
 **Problem Claude spotted while building it:**
 - The game's keyboard shortcuts (R restart, H help, M mute) would have fired while typing a name like "Rohit" on the win screen. Shortcuts are now ignored while typing in a text box, and a browser test types a name containing R, H and M to check this.
 
 ## Session 4: 2026-10-05: Redesign
-**Prompt (verbatim):**
+**Prompt 6:**
 > make the UI less ai genereated looking and make it more natural. use less AI fonts, no emojis and a different color pallette. push everything to vercel after
 
 **What Claude did:**
