@@ -147,7 +147,7 @@ const main = async () => {
     await page.keyboard.type("  Rhm   Tester ");   // r, h, m are game shortcuts
     assert(await page.locator("#winModal").isVisible(), "typing r didn't restart");
     assert(await page.locator("#help").isHidden(), "typing h didn't open help");
-    assert((await page.textContent("#muteBtn")) === "🔊", "typing m didn't mute");
+    assert((await page.getAttribute("#muteBtn", "aria-pressed")) === "false", "typing m didn't mute");
     await page.keyboard.press("Enter");
     await page.waitForFunction(() => document.getElementById("boardMsg").textContent.includes("#1"));
     assert(await page.locator("#nameForm").isHidden(), "form hidden after submitting");
@@ -244,9 +244,9 @@ const main = async () => {
 
   await check("mute toggle persists", async () => {
     await page.click("#muteBtn");
-    assert((await page.textContent("#muteBtn")) === "🔇", "muted icon");
+    assert((await page.getAttribute("#muteBtn", "aria-pressed")) === "true", "shows muted");
     await page.reload();
-    assert((await page.textContent("#muteBtn")) === "🔇", "still muted after reload");
+    assert((await page.getAttribute("#muteBtn", "aria-pressed")) === "true", "still muted after reload");
     await page.click("#muteBtn");
   });
 

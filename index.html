@@ -5,23 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Hand Physics</title>
   <meta name="description" content="Grab, throw and stack physics objects with your bare hand using webcam hand tracking." />
-  <meta name="theme-color" content="#14161f" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✋</text></svg>" />
+  <meta name="theme-color" content="#efe9dd" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 44'><g stroke='%2326231f' stroke-width='2.5' stroke-linejoin='round'><rect x='3' y='25' width='25' height='15' fill='%232a7a70'/><rect x='8' y='11' width='17' height='14' fill='%23d4462a' transform='rotate(-8 16 18)'/><circle cx='35' cy='33' r='7' fill='%23e3a524'/></g></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Young+Serif&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="app">
     <header class="topbar">
-      <button id="menuBtn" class="icon-btn" title="Levels (Esc)" aria-label="Open level menu">☰</button>
+      <button id="menuBtn" class="secondary" title="Levels (Esc)">Levels</button>
       <div class="level-info">
-        <h1 id="levelName">Hand Physics</h1>
+        <h1><span id="levelNum" class="num"></span><span id="levelName">Hand Physics</span></h1>
         <p id="levelGoal"></p>
       </div>
       <div class="hud">
-        <span id="timer" class="pill" title="Starts on your first grab">⏱ 0.0s</span>
-        <button id="camBtn" class="pill btn-pill" title="Turn hand tracking on/off">📷 Use hand</button>
-        <button id="boardsBtn" class="icon-btn" title="Leaderboards (L)" aria-label="Leaderboards">🏆</button>
-        <button id="muteBtn" class="icon-btn" title="Sound (M)" aria-label="Toggle sound">🔊</button>
+        <span id="timer" class="readout" title="Starts on your first grab">0.0s</span>
+        <button id="camBtn" class="secondary chip" title="Turn hand tracking on/off">Use hand</button>
+        <button id="boardsBtn" class="secondary chip" title="Leaderboards (L)">Scores</button>
+        <button id="muteBtn" class="icon-btn" title="Sound (M)" aria-label="Sound" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+            <path class="sound-on" d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" />
+            <path class="sound-off" d="M16 9.5l5 5M21 9.5l-5 5" />
+          </svg>
+        </button>
         <button id="helpBtn" class="icon-btn" title="How to play (H)" aria-label="How to play">?</button>
       </div>
     </header>
@@ -29,18 +38,18 @@
     <main id="stage">
       <video id="video" playsinline muted></video>
       <canvas id="world" aria-label="Physics play area"></canvas>
-      <div id="handStatus" class="pill stage-pill" hidden></div>
+      <div id="handStatus" class="stage-pill" hidden></div>
       <div id="levelStatus" class="stage-status"></div>
       <div id="toast" class="toast" role="status" aria-live="polite"></div>
     </main>
 
     <div class="below">
       <div class="actions">
-        <button id="restartBtn" class="secondary">↺ Restart <kbd>R</kbd></button>
+        <button id="restartBtn" class="secondary">Restart <kbd>R</kbd></button>
         <span id="spawnBar" hidden>
-          <button class="secondary" data-spawn="block">+ Block</button>
-          <button class="secondary" data-spawn="ball">+ Ball</button>
-          <button class="secondary" data-spawn="plank">+ Plank</button>
+          <button class="secondary" data-spawn="block">Add block</button>
+          <button class="secondary" data-spawn="ball">Add ball</button>
+          <button class="secondary" data-spawn="plank">Add plank</button>
           <button class="secondary" id="clearBtn">Clear</button>
         </span>
       </div>
@@ -52,22 +61,26 @@
   <section id="menu" class="overlay" aria-label="Level menu">
     <div class="card wide">
       <div class="hero">
-        <div class="hero-icon">✋</div>
+        <svg class="logo" viewBox="0 0 44 44" aria-hidden="true">
+          <rect x="3" y="25" width="25" height="15" fill="#2a7a70" />
+          <rect x="8" y="11" width="17" height="14" fill="#d4462a" transform="rotate(-8 16 18)" />
+          <circle cx="35" cy="33" r="7" fill="#e3a524" />
+        </svg>
         <div>
           <h1>Hand Physics</h1>
-          <p class="muted">Grab, throw and stack things with your bare hand: no controller, just your webcam.</p>
+          <p>Grab, throw and stack things with your bare hand. No controller, just your webcam.</p>
         </div>
       </div>
       <div class="start-row">
-        <button id="menuCamBtn" class="primary">📷 Play with my hand</button>
-        <button id="menuMouseBtn" class="secondary">🖱️ Play with mouse / touch</button>
+        <button id="menuCamBtn" class="primary">Play with my hand</button>
+        <button id="menuMouseBtn" class="secondary">Play with mouse or touch</button>
       </div>
       <div class="section-head">
         <h2>Levels</h2>
-        <button id="menuBoardsBtn" class="secondary">🏆 Leaderboards</button>
+        <button id="menuBoardsBtn" class="secondary">Leaderboards</button>
       </div>
       <div id="levelGrid" class="level-grid"></div>
-      <p class="muted small">🔒 Camera video is processed on your device and never uploaded.</p>
+      <p class="muted small">Camera video is processed on your device and never uploaded.</p>
     </div>
   </section>
 
@@ -75,31 +88,31 @@
   <section id="help" class="overlay" hidden aria-label="How to play">
     <div class="card">
       <h2>How to play</h2>
-      <div class="gestures">
-        <div class="gesture"><span>🤏</span><b>Pinch to grab</b><small>Touch thumb and index finger over a shape.</small></div>
-        <div class="gesture"><span>🖐️</span><b>Open to drop</b><small>Separate your fingers to let go.</small></div>
-        <div class="gesture"><span>💨</span><b>Swing to throw</b><small>Let go while moving and it flies.</small></div>
-        <div class="gesture"><span>🖱️</span><b>Mouse works too</b><small>Click-drag, or drag with a finger on phones.</small></div>
-      </div>
+      <ol class="steps">
+        <li><b>Pinch to grab</b>Touch your thumb and index finger together over a shape.</li>
+        <li><b>Open to drop</b>Spread your fingers to let go.</li>
+        <li><b>Swing to throw</b>Let go while your hand is moving and the shape flies.</li>
+        <li><b>No camera?</b>Click and drag with a mouse, or drag with a finger on a phone.</li>
+      </ol>
       <ul class="tips">
         <li>Face the camera with your palm toward it, about an arm's length away.</li>
         <li>Good lighting helps a lot. Avoid a bright window behind you.</li>
         <li>The blue ring shrinks as you pinch. When it turns solid, you're holding.</li>
-        <li>Keys: <kbd>R</kbd> restart · <kbd>Esc</kbd> levels · <kbd>M</kbd> sound · <kbd>H</kbd> help · <kbd>L</kbd> leaderboards</li>
+        <li>Keys: <kbd>R</kbd> restart, <kbd>Esc</kbd> levels, <kbd>M</kbd> sound, <kbd>H</kbd> help, <kbd>L</kbd> leaderboards</li>
       </ul>
-      <button id="helpClose" class="primary">Got it!</button>
+      <button id="helpClose" class="primary">Got it</button>
     </div>
   </section>
 
   <!-- Level complete -->
   <section id="winModal" class="overlay" hidden aria-label="Level complete">
     <div class="card center">
-      <h2 id="winTitle">Level complete!</h2>
+      <h2 id="winTitle">Level complete</h2>
       <div id="winStars" class="stars"></div>
       <p id="winTime" class="big"></p>
       <p id="winBest" class="muted"></p>
       <div class="board">
-        <h3>🏆 Top 5</h3>
+        <h3 class="label">Top 5</h3>
         <ol id="winBoardList" class="board-list"></ol>
         <form id="nameForm" class="name-form" hidden>
           <input id="nameInput" maxlength="16" placeholder="Your name" autocomplete="nickname"
@@ -109,9 +122,9 @@
         <p id="boardMsg" class="muted small" role="status" aria-live="polite"></p>
       </div>
       <div class="start-row">
-        <button id="winReplay" class="secondary">↺ Replay</button>
-        <button id="winMenu" class="secondary">☰ Levels</button>
-        <button id="winNext" class="primary">Next level →</button>
+        <button id="winReplay" class="secondary">Replay</button>
+        <button id="winMenu" class="secondary">Levels</button>
+        <button id="winNext" class="primary">Next level</button>
       </div>
     </div>
   </section>
@@ -119,8 +132,8 @@
   <!-- Leaderboards -->
   <section id="boards" class="overlay" hidden aria-label="Leaderboards">
     <div class="card">
-      <h2>🏆 Leaderboards</h2>
-      <p class="muted">The 5 fastest times on each level. Finish a level to get on the board.</p>
+      <h2>Leaderboards</h2>
+      <p class="muted">The five fastest times on each level. Finish a level to get on the board.</p>
       <div id="boardTabs" class="tabs" role="tablist" aria-label="Level"></div>
       <ol id="boardsList" class="board-list"></ol>
       <p id="boardsMsg" class="muted small" role="status" aria-live="polite"></p>

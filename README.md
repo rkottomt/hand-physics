@@ -48,7 +48,8 @@ _The section below was written by Claude (Claude Code), not by me._
 ### Architecture
 | File | Responsibility |
 |---|---|
-| `index.html`, `style.css` | Layout: top bar, stage (video behind a canvas), level menu, help and win overlays. Responsive down to phone width. |
+| `index.html`, `style.css` | Layout: top bar, stage (video behind a canvas), level menu, help, win and leaderboard overlays. Paper-and-ink theme (Young Serif, IBM Plex Sans/Mono). Responsive down to phone width. |
+| `js/constants.js` | Canvas size and the canvas color palette (kept in sync with `style.css`). |
 | `js/main.js` | UI controller. Turns mouse/touch and hand frames into grab/move/release calls, runs the HUD, menus, keyboard shortcuts and win screen. |
 | `js/game.js` | DOM-free game logic around a Matter.js engine: loads levels, grabbing via a spring `Constraint`, throw-speed cap, out-of-reach release, respawning lost or stranded bodies, hold-to-win timing, stars. |
 | `js/levels.js` | The six levels as data: `build()` creates bodies, `check()` says whether the goal is met, optional `tick()`/`draw()` hooks (e.g. the seesaw's restoring spring). |
@@ -73,7 +74,7 @@ _The section below was written by Claude (Claude Code), not by me._
 ### Leaderboard
 - **Storage:** Upstash Redis (through the Vercel Marketplace). Each level is a sorted set: member = name, score = best time. After every submit, everything below 5th place is deleted, so the database stays tiny. One player keeps one entry, and a slower run never replaces their best (`ZADD LT`).
 - **API:** `GET /api/leaderboard` returns every level's top 5 (`?level=hoop` for one level). `POST /api/leaderboard` with `{ level, name, seconds }` returns the updated top 5 and your rank.
-- **Flow:** the win screen loads that level's top 5. If your time makes it, a name box appears, prefilled with the last name you used. The 🏆 button (or <kbd>L</kbd>) shows all five boards.
+- **Flow:** the win screen loads that level's top 5. If your time makes it, a name box appears, prefilled with the last name you used. The Scores button (or <kbd>L</kbd>) shows all five boards.
 - **Checks on the server:** known timed level only (Free Play has no timer), names 1-16 letters/numbers/spaces/`_ . -`, times between the level's physical minimum (its hold time) and 1 hour, and at most 30 submissions per IP per minute.
 - **Limitation:** the time is measured in the browser, so a determined cheater could send a fake (but possible) time. Stopping that would need the server to replay and verify each run.
 

@@ -2,7 +2,7 @@
 //   build(b)          -> creates the level using the builder from game.js, returns "refs"
 //   check(game, refs) -> { met, text }  — met must stay true for holdMs to win
 // par is the 3-star time in seconds (the clock starts on your first grab).
-import { WIDTH, FLOOR_Y } from "./constants.js";
+import { WIDTH, FLOOR_Y, INK, PAPER, PALETTE } from "./constants.js";
 
 const SPRING = 0.0016; // seesaw: how hard it pulls back toward level (tuned in tests)
 const DAMPING = 0.15;  // seesaw: fraction of spin removed each step, stops wobbling
@@ -13,13 +13,12 @@ export const LEVELS = [
   {
     id: "first-grab",
     name: "First Grab",
-    icon: "🤏",
     goal: "Pick up the ball and drop it in the glowing zone.",
     tip: "Pinch your thumb and index finger to grab. Open your hand to let go.",
     par: 8,
     holdMs: 800,
     build(b) {
-      const ball = b.ball(220, onFloor(72), 36, { color: "#f6c945" });
+      const ball = b.ball(220, onFloor(72), 36, { color: PALETTE.mustard });
       const zone = b.zone(650, FLOOR_Y - 170, 230, 170, "DROP HERE");
       return { ball, zone };
     },
@@ -31,7 +30,6 @@ export const LEVELS = [
   {
     id: "tower",
     name: "Sky Tower",
-    icon: "🏗️",
     goal: "Stack blocks until one rests above the dashed line for 3 seconds.",
     tip: "Move slowly while placing. Wide blocks make a better base.",
     par: 35,
@@ -57,19 +55,19 @@ export const LEVELS = [
   {
     id: "hoop",
     name: "Hoop Shot",
-    icon: "🏀",
     goal: "Throw the ball into the basket. You can't reach past the red line!",
-    tip: "Swing toward the basket and let go mid-swing — or just carry it across the line.",
+    tip: "Swing toward the basket and let go mid-swing, or just carry it across the line.",
     par: 12,
     holdMs: 600,
     build(b) {
       b.noGrabFrom(470);
-      const ball = b.ball(200, onFloor(56), 28, { color: "#f49b4a", density: 0.002, bounce: 0.45 });
+      const ball = b.ball(200, onFloor(56), 28, { color: PALETTE.orange, density: 0.002, bounce: 0.45 });
       const cx = 770, bottom = 380, inner = 130, wallH = 90;
-      b.wall(cx, (bottom + FLOOR_Y) / 2, 14, FLOOR_Y - bottom, { color: "#2b2f40" }); // pole
-      b.wall(cx, bottom, inner + 24, 14, { color: "#c45a2a" });                        // cup floor
-      b.wall(cx - inner / 2 - 6, bottom - wallH / 2, 12, wallH, { color: "#c45a2a" }); // left rim
-      b.wall(cx + inner / 2 + 6, bottom - wallH / 2, 12, wallH, { color: "#c45a2a" }); // right rim
+      const rim = { color: PALETTE.red };
+      b.wall(cx, (bottom + FLOOR_Y) / 2, 14, FLOOR_Y - bottom);                // pole
+      b.wall(cx, bottom, inner + 24, 14, rim);                                 // cup floor
+      b.wall(cx - inner / 2 - 6, bottom - wallH / 2, 12, wallH, rim);          // left rim
+      b.wall(cx + inner / 2 + 6, bottom - wallH / 2, 12, wallH, rim);          // right rim
       const zone = b.zone(cx - inner / 2, bottom - wallH, inner, wallH - 7);
       return { ball, zone };
     },
@@ -81,20 +79,19 @@ export const LEVELS = [
   {
     id: "knockdown",
     name: "Knockdown",
-    icon: "🎯",
     goal: "Throw boulders to knock all 3 red targets off their shelves.",
-    tip: "Boulders are heavy — a firm throw works best. Missed ones roll back to you.",
+    tip: "Boulders are heavy, so throw hard. Missed ones roll back to you.",
     par: 20,
     holdMs: 400,
     build(b) {
       b.noGrabFrom(420);
       const shelves = [[600, 470, 130], [760, 320, 130], [835, 580, 100]];
       const targets = shelves.map(([x, y, w]) => {
-        b.wall(x, y, w, 14, { color: "#6b7089" });
+        b.wall(x, y, w, 14, { color: PALETTE.steel });
         return b.target(x, y - 7 - 26, 26);
       });
       for (let i = 0; i < 4; i++) {
-        b.ball(70 + i * 85, onFloor(60), 30, { density: 0.004, color: "#8a8f9e" });
+        b.ball(70 + i * 85, onFloor(60), 30, { density: 0.004, color: PALETTE.stone });
       }
       return { targets };
     },
@@ -105,24 +102,33 @@ export const LEVELS = [
       ).length;
       return { met: standing === 0, text: `Targets left: ${standing}` };
     },
+    // Paint a bullseye ring on each target.
+    draw(ctx, { targets }) {
+      ctx.strokeStyle = PAPER;
+      ctx.lineWidth = 3;
+      for (const t of targets) {
+        ctx.beginPath();
+        ctx.arc(t.position.x, t.position.y, 13, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    },
   },
 
   {
     id: "seesaw",
     name: "Balancing Act",
-    icon: "⚖️",
     goal: "Rest 4 blocks on the seesaw and keep it level for 3 seconds.",
     tip: "Dark blocks are heavy. Balance them by putting them closer to the middle.",
     par: 45,
     holdMs: 3000,
     build(b) {
       const px = WIDTH / 2, py = 520;
-      b.wall(px, (py + FLOOR_Y) / 2 + 8, 26, FLOOR_Y - py - 16, { decorative: true, color: "#2b2f40" });
+      b.wall(px, (py + FLOOR_Y) / 2 + 8, 26, FLOOR_Y - py - 16, { decorative: true });
       const plank = b.add(Matter.Bodies.rectangle(px, py, 560, 16, {
-        density: 0.002, friction: 1, frictionStatic: 2, render: { fillStyle: "#c9a66b" },
+        density: 0.002, friction: 1, frictionStatic: 2, render: { fillStyle: PALETTE.wood, strokeStyle: INK, lineWidth: 2 },
       }));
       b.pivot(plank, px, py);
-      const heavy = { density: 0.003, color: "#4b3fa8" };
+      const heavy = { density: 0.003, color: PALETTE.charcoal };
       b.block(70, onFloor(50), 90, 50);
       b.block(70, onFloor(50) - 54, 80, 50, heavy);
       b.block(170, onFloor(50), 70, 50);
@@ -138,7 +144,7 @@ export const LEVELS = [
       const tilt = Math.abs(plank.angle * 180 / Math.PI);
       return {
         met: on >= 4 && tilt < 6,
-        text: `On seesaw: ${Math.min(on, 4)}/4 · Tilt: ${tilt.toFixed(0)}°${tilt >= 6 ? " (needs < 6°)" : " ✓"}`,
+        text: `On seesaw: ${Math.min(on, 4)}/4 · Tilt: ${tilt.toFixed(0)}°${tilt >= 6 ? " (needs < 6°)" : " (level)"}`,
       };
     },
     // A spring under the plank pulls it back toward level (with damping so it doesn't wobble).
@@ -149,23 +155,25 @@ export const LEVELS = [
     },
     // Draw the bolt the plank pivots on.
     draw(ctx, { px, py }) {
-      ctx.fillStyle = "#e8e8f0";
+      ctx.fillStyle = PAPER;
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(px, py, 6, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
     },
   },
 
   {
     id: "sandbox",
     name: "Free Play",
-    icon: "🧪",
     sandbox: true,
     goal: "No rules. Spawn shapes, build, throw and smash.",
     tip: "Use the + buttons below to add more shapes.",
     build(b) {
-      b.wall(220, 420, 320, 14, { angle: 0.35, color: "#6b7089" }); // ramp
-      b.wall(760, 360, 200, 14, { color: "#6b7089" });               // shelf
+      b.wall(220, 420, 320, 14, { angle: 0.35, color: PALETTE.steel }); // ramp
+      b.wall(760, 360, 200, 14, { color: PALETTE.steel });               // shelf
       for (let i = 0; i < 5; i++) b.block(560 + i * 70, onFloor(40), 60, 40);
       for (let i = 0; i < 3; i++) b.ball(120 + i * 60, 200, 22);
       b.block(760, 340 - 8, 180, 18);

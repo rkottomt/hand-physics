@@ -1,7 +1,7 @@
 // DOM-free game logic: owns the Matter.js engine, loads levels, handles grabbing,
 // and decides when a level is won. main.js draws it and feeds it input.
 // (No DOM here, so tests/game.test.mjs can run every level headlessly in Node.)
-import { WIDTH, HEIGHT, FLOOR_Y } from "./constants.js";
+import { WIDTH, HEIGHT, FLOOR_Y, INK, PALETTE } from "./constants.js";
 import { LEVELS } from "./levels.js";
 
 const { Engine, Bodies, Body, Composite, Constraint, Query, Events, Vector } = Matter;
@@ -11,7 +11,8 @@ const MAX_THROW_SPEED = 32;  // cap release speed so bodies can't tunnel through
 const REST_SPEED = 0.35;     // below this a body counts as "resting"
 const STRANDED_MS = 1500;    // bodies stuck out of reach return home after this long
 const SANDBOX_LIMIT = 40;
-const COLORS = ["#f6c945", "#ef6f6c", "#5bc0a8", "#8c7cf0", "#f49b4a", "#4fb3f6"];
+const { mustard, red, teal, blue, salmon, moss } = PALETTE;
+const COLORS = [mustard, red, teal, blue, salmon, moss];
 
 export function starsFor(seconds, par) {
   if (seconds <= par) return 3;
@@ -59,7 +60,7 @@ export class Game {
   restart() { this.load(this.levelIndex); }
 
   addWalls() {
-    const wall = { isStatic: true, render: { fillStyle: "#3a3f55" } };
+    const wall = { isStatic: true, render: { fillStyle: INK } };
     Composite.add(this.world, [
       Bodies.rectangle(WIDTH / 2, FLOOR_Y + 60, WIDTH * 3, 120, wall),      // floor
       Bodies.rectangle(-40, HEIGHT / 2 - 400, 80, HEIGHT * 3, wall),        // left
@@ -75,6 +76,8 @@ export class Game {
       body.grabbable = true;
       body.spawn = { x: body.position.x, y: body.position.y, angle: body.angle };
       body.render.fillStyle = color ?? COLORS[colorIndex++ % COLORS.length];
+      body.render.strokeStyle = INK; // inked outline, like a cut-out
+      body.render.lineWidth = 2;
       return add(body);
     };
     return {
@@ -88,12 +91,12 @@ export class Game {
       }), o.color),
       wall: (x, y, w, h, o = {}) => add(Bodies.rectangle(x, y, w, h, {
         isStatic: true, isSensor: !!o.decorative, angle: o.angle ?? 0,
-        render: { fillStyle: o.color ?? "#3a3f55" },
+        render: { fillStyle: o.color ?? INK },
       })),
       target: (x, y, r) => {
         const t = add(Bodies.circle(x, y, r, {
           density: 0.0006, friction: 0.6,
-          render: { fillStyle: "#ff4d6d", strokeStyle: "#ffffff", lineWidth: 3 },
+          render: { fillStyle: PALETTE.red, strokeStyle: INK, lineWidth: 2 },
         }));
         t.isTarget = true;
         t.spawn = { x, y };

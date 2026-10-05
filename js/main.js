@@ -133,7 +133,7 @@ function onHandFrame(frame) {
       wasPinching = false;
       releaseFrom("hand");
     }
-    setHandStatus(camState === "on" ? "🔍 Looking for your hand…" : "");
+    setHandStatus(camState === "on" ? "Looking for your hand…" : "");
     return;
   }
   handLostAt = null;
@@ -157,7 +157,7 @@ function onHandFrame(frame) {
     releaseFrom("hand");
   }
   wasPinching = frame.pinching;
-  setHandStatus(grabSource === "hand" ? "🤏 Holding" : frame.pinching ? "🤏 Pinching" : "✋ Hand found: pinch to grab");
+  setHandStatus(grabSource === "hand" ? "Holding" : frame.pinching ? "Pinching" : "Hand found: pinch to grab");
 }
 
 function setHandStatus(text) {
@@ -170,18 +170,18 @@ async function startCamera() {
   camState = "starting";
   camBtn.disabled = true;
   try {
-    await tracker.start((msg) => { camBtn.textContent = "⏳ Starting…"; setHandStatus(msg); });
+    await tracker.start((msg) => { camBtn.textContent = "Starting…"; setHandStatus(msg); });
     camState = "on";
     video.classList.add("live");
     camBtn.classList.add("on");
-    camBtn.textContent = "📷 Hand on";
-    setHandStatus("🔍 Looking for your hand…");
+    camBtn.textContent = "Hand on";
+    setHandStatus("Looking for your hand…");
     toast("Hand tracking is on. Hold your hand up to the camera!");
   } catch (err) {
     console.warn("Camera/hand tracking failed:", err);
     tracker.stop();
     camState = "off";
-    camBtn.textContent = "📷 Use hand";
+    camBtn.textContent = "Use hand";
     setHandStatus("");
     toast(cameraErrorMessage(err), 6000);
   } finally {
@@ -196,7 +196,7 @@ function stopCamera() {
   camState = "off";
   video.classList.remove("live");
   camBtn.classList.remove("on");
-  camBtn.textContent = "📷 Use hand";
+  camBtn.textContent = "Use hand";
   setHandStatus("");
 }
 
@@ -225,7 +225,8 @@ function loadLevel(index) {
   grabSource = null;
   game.load(index);
   const level = LEVELS[index];
-  $("levelName").textContent = `${level.icon} ${index + 1}. ${level.name}`;
+  $("levelNum").textContent = levelNumber(index);
+  $("levelName").textContent = level.name;
   $("levelGoal").textContent = level.goal;
   $("levelTip").textContent = level.tip;
   $("spawnBar").hidden = !level.sandbox;
@@ -235,7 +236,7 @@ function loadLevel(index) {
 
 // The HUD reads from the game every frame instead of being pushed updates.
 (function hudLoop() {
-  timerEl.textContent = `⏱ ${game.elapsed().toFixed(1)}s`;
+  timerEl.textContent = `${game.elapsed().toFixed(1)}s`;
   const holding = game.holdProgress > 0 && !game.won;
   levelStatus.textContent = holding ? "Hold steady…" : game.status;
   requestAnimationFrame(hudLoop);
@@ -253,16 +254,20 @@ function onWin({ index, seconds, stars, level }) {
     ? `New best! ${stars < 3 ? `Beat ${level.par}s for 3 stars.` : ""}`
     : `Best: ${best.seconds.toFixed(1)}s · 3 stars under ${level.par}s`;
   const next = index + 1 < LEVELS.length;
-  $("winNext").textContent = next ? "Next level →" : "All levels done 🎉";
+  $("winNext").textContent = next ? "Next level" : "Back to levels";
   $("winNext").onclick = () => { closeOverlay("winModal"); next ? loadLevel(index + 1) : openMenu(); };
   showWinBoard(level, seconds);
   // Short delay so you get to see the moment you won
   setTimeout(() => openOverlay("winModal", "winNext"), 700);
 }
 
+const STAR_PATH = "M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z";
 function starHTML(stars) {
-  return [1, 2, 3].map((i) => `<span class="star${i <= stars ? " on" : ""}">★</span>`).join("");
+  return [1, 2, 3].map((i) =>
+    `<svg class="star${i <= stars ? " on" : ""}" viewBox="0 0 24 24" aria-hidden="true"><path d="${STAR_PATH}"/></svg>`).join("");
 }
+
+const levelNumber = (index) => String(index + 1).padStart(2, "0");
 
 // ---------- leaderboard ----------
 const nameForm = $("nameForm");
@@ -276,7 +281,7 @@ function renderBoard(list, entries, me) {
     const li = document.createElement("li");
     li.classList.toggle("me", entry.name === me);
     li.innerHTML = `<span class="rank"></span><span class="who"></span><span class="time"></span>`;
-    li.children[0].textContent = ["🥇", "🥈", "🥉"][i] ?? i + 1;
+    li.children[0].textContent = i + 1;
     li.children[1].textContent = entry.name;
     li.children[2].textContent = `${entry.seconds.toFixed(2)}s`;
     return li;
@@ -331,7 +336,7 @@ nameForm.addEventListener("submit", async (e) => {
     const mine = entries[rank - 1];
     boardMsg.textContent = !rank ? "Someone just beat that time, so it didn't make the top 5."
       : mine.seconds < Math.round(run.seconds * 1000) / 1000 ? `Your best of ${mine.seconds.toFixed(2)}s is still #${rank}.`
-      : `You're #${rank} on ${run.level.name}! 🎉`;
+      : `You're #${rank} on ${run.level.name}.`;
   } catch (err) {
     if (currentRun === run) boardMsg.textContent = err.message;
   } finally {
@@ -339,18 +344,19 @@ nameForm.addEventListener("submit", async (e) => {
   }
 });
 
-// The 🏆 overlay: one tab per timed level
+// The leaderboards overlay: one tab per timed level
 const TIMED = LEVELS.filter((l) => !l.sandbox);
 const boardTabs = $("boardTabs");
 let boardsCache = null;   // { levelId: entries } from the last fetch
 let boardsTab = TIMED[0].id;
 
 for (const level of TIMED) {
+  const index = LEVELS.indexOf(level);
   const tab = document.createElement("button");
   tab.className = "tab";
   tab.setAttribute("role", "tab");
   tab.dataset.level = level.id;
-  tab.innerHTML = `<span aria-hidden="true">${level.icon}</span> <span class="tab-name">${level.name}</span>`;
+  tab.innerHTML = `<span class="tab-num">${levelNumber(index)}</span><span class="tab-name">${level.name}</span>`;
   tab.addEventListener("click", () => { boardsTab = level.id; renderBoardsTab(); });
   boardTabs.append(tab);
 }
@@ -396,8 +402,8 @@ function buildLevelGrid() {
     const btn = document.createElement("button");
     btn.className = "level-card";
     btn.innerHTML = `
-      <span class="lc-icon">${level.icon}</span>
-      <span class="lc-name">${i + 1}. ${level.name}</span>
+      <span class="lc-num">${levelNumber(i)}</span>
+      <span class="lc-name">${level.name}</span>
       <span class="lc-goal">${level.goal}</span>
       <span class="lc-stars">${level.sandbox ? "Sandbox" : starHTML(best?.stars ?? 0) + (best ? ` <small>${best.seconds.toFixed(1)}s</small>` : "")}</span>`;
     btn.addEventListener("click", () => play(i));
@@ -439,7 +445,8 @@ document.querySelectorAll("[data-spawn]").forEach((btn) =>
 const muteBtn = $("muteBtn");
 function applyMute() {
   setMuted(settings.muted);
-  muteBtn.textContent = settings.muted ? "🔇" : "🔊";
+  muteBtn.setAttribute("aria-pressed", settings.muted);
+  muteBtn.title = settings.muted ? "Sound is off (M)" : "Sound is on (M)";
 }
 muteBtn.addEventListener("click", () => {
   unlockAudio();
