@@ -20,17 +20,19 @@ _TODO: your own words._
 _TODO: your own words._
 
 ## Running it locally
-No build step. The page is plain HTML/CSS/JS modules, so it only needs a static file server:
+No build step. The page is plain HTML/CSS/JS modules plus one serverless function for the leaderboard:
 
 ```bash
-npx serve -l 8000 .      # or: python3 -m http.server 8000
-# open http://localhost:8000
+npm start                # http://localhost:8000, with an in-memory leaderboard
 ```
+
+To use the real leaderboard database locally: `npx vercel env pull .env.local`, then
+`node --env-file=.env.local scripts/dev-server.mjs`. Any plain static server (`npx serve`, `python3 -m http.server`) also runs the game. The leaderboard then just shows as offline.
 
 The camera only works on `localhost` or HTTPS (a browser security rule).
 
 ## Secrets
-There are none. The app has no backend and no API keys. Matter.js and MediaPipe load from public CDNs, and the webcam video is processed entirely in the browser and never uploaded. Saved progress lives in the browser's `localStorage`.
+The only secrets are the leaderboard database's URL and token (`KV_REST_API_URL`, `KV_REST_API_TOKEN`). The Upstash integration stores them as Vercel environment variables, and only the serverless function reads them, so they never reach the browser or this repo (`.env*.local` is gitignored). Matter.js and MediaPipe load from public CDNs. The webcam video is processed entirely in the browser and never uploaded. Saved progress lives in the browser's `localStorage`.
 
 ## Device support
 Works on desktop and phones. Hand tracking needs a webcam (front camera on phones). Without one, you can play every level with a mouse or by dragging with a finger.
@@ -54,7 +56,12 @@ _The section below was written by Claude (Claude Code), not by me._
 | `js/gesture.js` | Pure math: pinch ratio (thumb–index gap ÷ hand size), pinch hysteresis (on < 0.35, off > 0.5), smoothing, and mapping video coords to the canvas to match `object-fit: cover`. |
 | `js/overlay.js` | Canvas drawing on top of the physics: zones, goal line, no-reach area, hold progress bar, hover/held outlines, hand skeleton and cursor ring. |
 | `js/audio.js` | Synthesized sound effects with the Web Audio API. |
-| `js/progress.js` | Best stars/time and settings in `localStorage` (failure-safe). |
+| `js/progress.js` | Best stars/time, settings and the last leaderboard name in `localStorage` (failure-safe). |
+| `js/leaderboard.js` | Browser client for the leaderboard API, with an 8 s timeout. If it fails, the game still works and the UI says the board is offline. |
+| `api/leaderboard.mjs` | Vercel serverless function at `/api/leaderboard`. |
+| `api/_lib/leaderboard.mjs` | Leaderboard logic: validation, rate limiting, Redis commands, and a tiny Upstash REST client (no npm dependencies). |
+| `api/_lib/memory-redis.mjs` | In-memory stand-in for the Redis commands used, for local dev and tests. |
+| `scripts/dev-server.mjs` | Local server: static files plus the API, as Vercel runs it. |
 
 ### Interaction design
 - **Grab:** pinch over a shape, or within 30 px of one. A pinch that starts just before reaching a shape still grabs it for 300 ms.
@@ -63,12 +70,21 @@ _The section below was written by Claude (Claude Code), not by me._
 - **Tracking dropouts** under 250 ms don't drop what you're holding.
 - The **timer starts on your first grab**, not when the level loads.
 
+### Leaderboard
+- **Storage:** Upstash Redis (through the Vercel Marketplace). Each level is a sorted set: member = name, score = best time. After every submit, everything below 5th place is deleted, so the database stays tiny. One player keeps one entry, and a slower run never replaces their best (`ZADD LT`).
+- **API:** `GET /api/leaderboard` returns every level's top 5 (`?level=hoop` for one level). `POST /api/leaderboard` with `{ level, name, seconds }` returns the updated top 5 and your rank.
+- **Flow:** the win screen loads that level's top 5. If your time makes it, a name box appears, prefilled with the last name you used. The 🏆 button (or <kbd>L</kbd>) shows all five boards.
+- **Checks on the server:** known timed level only (Free Play has no timer), names 1-16 letters/numbers/spaces/`_ . -`, times between the level's physical minimum (its hold time) and 1 hour, and at most 30 submissions per IP per minute.
+- **Limitation:** the time is measured in the browser, so a determined cheater could send a fake (but possible) time. Stopping that would need the server to replay and verify each run.
+
 ### Testing
 ```bash
 npm install
-npm test            # 30 headless tests: every level in Node with real Matter.js physics
+npm test            # 40 headless tests: every level in Node with real Matter.js physics,
+                    # plus the leaderboard API (ordering, top-5 cut, validation, rate limit)
 npm run test:e2e    # Playwright in Chromium: UI flows, touch on a phone viewport, camera-denied
-                    # handling, and real MediaPipe tracking using a hand photo as a fake webcam
+                    # handling, leaderboard submit + offline handling, and real MediaPipe
+                    # tracking using a hand photo as a fake webcam
 BASE_URL=https://<deployed-url>/ npm run test:e2e   # same checks against the live site
 ```
 The headless tests check that every level is beatable, can't be won by doing nothing, and restarts cleanly. Simulated solutions confirm the intended solution works and wrong ones fail (for example, a lopsided seesaw doesn't count).

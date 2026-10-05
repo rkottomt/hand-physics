@@ -3,11 +3,11 @@
 //   BASE_URL=https://... npm run test:e2e   to test a deployed copy
 // Screenshots are written to tests/screenshots/.
 import { chromium } from "playwright";
-import http from "node:http";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { startServer } from "../scripts/dev-server.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SHOTS = path.join(ROOT, "tests", "screenshots");
@@ -24,21 +24,6 @@ async function check(name, fn) {
   }
 }
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
-
-// ---------- tiny static server ----------
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".jpg": "image/jpeg" };
-function serve() {
-  const server = http.createServer((req, res) => {
-    const url = decodeURIComponent(req.url.split("?")[0].split("#")[0]);
-    const file = path.join(ROOT, url === "/" ? "index.html" : url);
-    if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-      res.writeHead(404); res.end(); return;
-    }
-    res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] ?? "application/octet-stream" });
-    fs.createReadStream(file).pipe(res);
-  });
-  return new Promise((resolve) => server.listen(0, () => resolve(server)));
-}
 
 // ---------- fake webcam: turn a photo into a .y4m video Chrome can play as a camera ----------
 async function makeFakeCamera(browser) {
@@ -94,7 +79,9 @@ async function dragBody(page, from, to) {
 }
 
 const main = async () => {
-  const server = BASE_URL_OR(await serve());
+  // Local runs get the dev server with a fresh in-memory leaderboard
+  const server = BASE_URL_OR(await startServer());
+  const live = !!process.env.BASE_URL; // don't post test scores to the real leaderboard
   const base = server.url;
   console.log(`Testing ${base}`);
 
@@ -147,12 +134,50 @@ const main = async () => {
     await page.screenshot({ path: `${SHOTS}/03-win.png` });
   });
 
+  await check("win screen shows the top 5 and asks for a name", async () => {
+    await page.waitForFunction(() => !document.getElementById("boardMsg").textContent.includes("Loading"));
+    if (live) return; // the live board may already be full of faster times
+    assert(await page.locator("#nameForm").isVisible(), "name form shown for a top-5 time");
+    assert((await page.textContent("#boardMsg")).includes("claim #1"), await page.textContent("#boardMsg"));
+    assert((await page.textContent("#winBoardList")).includes("Be the first"), "empty board message");
+  });
+
+  if (!live) await check("submitting a name puts it on the board (shortcut keys don't fire while typing)", async () => {
+    await page.click("#nameInput");
+    await page.keyboard.type("  Rhm   Tester ");   // r, h, m are game shortcuts
+    assert(await page.locator("#winModal").isVisible(), "typing r didn't restart");
+    assert(await page.locator("#help").isHidden(), "typing h didn't open help");
+    assert((await page.textContent("#muteBtn")) === "🔊", "typing m didn't mute");
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => document.getElementById("boardMsg").textContent.includes("#1"));
+    assert(await page.locator("#nameForm").isHidden(), "form hidden after submitting");
+    const row = page.locator("#winBoardList li.me");
+    assert((await row.textContent()).includes("Rhm Tester"), "own row highlighted, spaces tidied");
+    await page.screenshot({ path: `${SHOTS}/03b-win-leaderboard.png` });
+  });
+
   await check("next level button loads level 2", async () => {
     await page.click("#winNext");
     assert((await page.textContent("#levelName")).includes("Sky Tower"), "on Sky Tower");
     assert(await page.locator("#winModal").isHidden(), "modal closed");
     await page.waitForTimeout(800);
     await page.screenshot({ path: `${SHOTS}/04-tower.png` });
+  });
+
+  await check("leaderboard overlay shows each level's top 5", async () => {
+    await page.click("#boardsBtn");
+    await page.locator("#boards").waitFor({ state: "visible" });
+    assert((await page.locator("#boardTabs .tab").count()) === 5, "a tab per timed level");
+    assert((await page.getAttribute("#boardTabs .tab[data-level=tower]", "aria-selected")) === "true", "opens on current level");
+    await page.waitForFunction(() => !document.getElementById("boardsMsg").textContent);
+    await page.click("#boardTabs .tab[data-level=first-grab]");
+    if (!live) assert((await page.textContent("#boardsList")).includes("Rhm Tester"), "level 1 time listed");
+    await page.screenshot({ path: `${SHOTS}/04b-leaderboards.png` });
+    await page.keyboard.press("Escape");
+    assert(await page.locator("#boards").isHidden(), "Esc closes it");
+    await page.keyboard.press("l");
+    assert(await page.locator("#boards").isVisible(), "L opens it");
+    await page.click("#boardsClose");
   });
 
   await check("R restarts and keeps the world intact", async () => {
@@ -260,6 +285,28 @@ const main = async () => {
     assert(msg.includes("blocked") && msg.includes("mouse"), msg);
     assert((await p.textContent("#camBtn")).includes("Use hand"), "button reset");
     await p.screenshot({ path: `${SHOTS}/09-camera-denied.png` });
+    await c.close();
+  });
+
+  // ---------------- leaderboard offline ----------------
+  console.log("\nLeaderboard offline");
+  await check("winning still works and the win screen explains", async () => {
+    const c = await plain.newContext({ viewport: { width: 1280, height: 900 } });
+    const p = await c.newPage();
+    const pErrors = [];
+    p.on("pageerror", (e) => pErrors.push(e.message));
+    await p.route("**/api/leaderboard*", (route) => route.abort());
+    await p.goto(`${base}#first-grab`);
+    if (await p.locator("#help").isVisible()) await p.click("#helpClose");
+    const { ball, zone } = await p.evaluate(() => ({ ball: game.refs.ball.position, zone: game.refs.zone }));
+    await dragBody(p, ball, { x: zone.x + zone.w / 2, y: zone.y + 60 });
+    await p.locator("#winModal").waitFor({ state: "visible", timeout: 5000 });
+    await p.waitForFunction(() => document.getElementById("boardMsg").textContent.includes("Couldn't reach"));
+    assert(await p.locator("#nameForm").isHidden(), "no name form");
+    await p.keyboard.press("l");
+    await p.waitForFunction(() => document.getElementById("boardsMsg").textContent.includes("Couldn't reach"));
+    await p.screenshot({ path: `${SHOTS}/09b-leaderboard-offline.png` });
+    assert(pErrors.length === 0, pErrors.join(" | "));
     await c.close();
   });
 

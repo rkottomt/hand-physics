@@ -23,5 +23,5 @@ export function saveResult(progress, levelId, stars, seconds) {
   return isBest;
 }
 
-export function loadSettings() { return { muted: false, seenHelp: false, ...read(SETTINGS_KEY) }; }
+export function loadSettings() { return { muted: false, seenHelp: false, playerName: "", ...read(SETTINGS_KEY) }; }
 export function saveSettings(settings) { write(SETTINGS_KEY, settings); }

@@ -8,6 +8,7 @@ import { coverMap } from "./gesture.js";
 import { drawOverlay } from "./overlay.js";
 import { sfx, setMuted, unlockAudio } from "./audio.js";
 import { loadProgress, saveResult, loadSettings, saveSettings } from "./progress.js";
+import { fetchBoards, submitTime, qualifies } from "./leaderboard.js";
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("world");
@@ -254,12 +255,123 @@ function onWin({ index, seconds, stars, level }) {
   const next = index + 1 < LEVELS.length;
   $("winNext").textContent = next ? "Next level →" : "All levels done 🎉";
   $("winNext").onclick = () => { closeOverlay("winModal"); next ? loadLevel(index + 1) : openMenu(); };
+  showWinBoard(level, seconds);
   // Short delay so you get to see the moment you won
   setTimeout(() => openOverlay("winModal", "winNext"), 700);
 }
 
 function starHTML(stars) {
   return [1, 2, 3].map((i) => `<span class="star${i <= stars ? " on" : ""}">★</span>`).join("");
+}
+
+// ---------- leaderboard ----------
+const nameForm = $("nameForm");
+const nameInput = $("nameInput");
+const boardMsg = $("boardMsg");
+let currentRun = null;  // the win the win screen is showing: { level, seconds }
+let pendingRun = null;  // that win, while it's a top-5 time waiting for a name
+
+function renderBoard(list, entries, me) {
+  const rows = entries.map((entry, i) => {
+    const li = document.createElement("li");
+    li.classList.toggle("me", entry.name === me);
+    li.innerHTML = `<span class="rank"></span><span class="who"></span><span class="time"></span>`;
+    li.children[0].textContent = ["🥇", "🥈", "🥉"][i] ?? i + 1;
+    li.children[1].textContent = entry.name;
+    li.children[2].textContent = `${entry.seconds.toFixed(2)}s`;
+    return li;
+  });
+  if (!rows.length) {
+    rows.push(Object.assign(document.createElement("li"), { className: "empty", textContent: "No times yet. Be the first!" }));
+  }
+  list.replaceChildren(...rows);
+}
+
+function showWinBoard(level, seconds) {
+  const run = { level, seconds };
+  currentRun = run;
+  pendingRun = null;
+  nameForm.hidden = true;
+  $("winBoardList").replaceChildren();
+  boardMsg.textContent = "Loading leaderboard…";
+  fetchBoards(level.id).then((boards) => {
+    if (currentRun !== run) return;
+    const entries = boards[level.id];
+    renderBoard($("winBoardList"), entries, settings.playerName);
+    if (qualifies(entries, seconds)) {
+      pendingRun = run;
+      nameInput.value = settings.playerName;
+      nameForm.hidden = false;
+      const place = entries.filter((e) => e.seconds <= seconds).length + 1;
+      boardMsg.textContent = `That's a top-5 time! Enter your name to claim #${place}.`;
+    } else {
+      boardMsg.textContent = `Beat ${entries.at(-1).seconds.toFixed(2)}s to make the top 5.`;
+    }
+  }).catch((err) => {
+    if (currentRun === run) boardMsg.textContent = `${err.message} Your time is still saved on this device.`;
+  });
+}
+
+nameForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const run = pendingRun;
+  const name = nameInput.value.trim().replace(/\s+/g, " ");
+  if (!run) return;
+  if (!name) { nameInput.focus(); return; }
+  $("nameSubmit").disabled = true;
+  boardMsg.textContent = "Saving…";
+  try {
+    const { entries, rank } = await submitTime(run.level.id, name, run.seconds);
+    settings.playerName = name;
+    saveSettings(settings);
+    if (currentRun !== run) return;
+    pendingRun = null;
+    nameForm.hidden = true;
+    renderBoard($("winBoardList"), entries, name);
+    const mine = entries[rank - 1];
+    boardMsg.textContent = !rank ? "Someone just beat that time, so it didn't make the top 5."
+      : mine.seconds < Math.round(run.seconds * 1000) / 1000 ? `Your best of ${mine.seconds.toFixed(2)}s is still #${rank}.`
+      : `You're #${rank} on ${run.level.name}! 🎉`;
+  } catch (err) {
+    if (currentRun === run) boardMsg.textContent = err.message;
+  } finally {
+    $("nameSubmit").disabled = false;
+  }
+});
+
+// The 🏆 overlay: one tab per timed level
+const TIMED = LEVELS.filter((l) => !l.sandbox);
+const boardTabs = $("boardTabs");
+let boardsCache = null;   // { levelId: entries } from the last fetch
+let boardsTab = TIMED[0].id;
+
+for (const level of TIMED) {
+  const tab = document.createElement("button");
+  tab.className = "tab";
+  tab.setAttribute("role", "tab");
+  tab.dataset.level = level.id;
+  tab.innerHTML = `<span aria-hidden="true">${level.icon}</span> <span class="tab-name">${level.name}</span>`;
+  tab.addEventListener("click", () => { boardsTab = level.id; renderBoardsTab(); });
+  boardTabs.append(tab);
+}
+
+function renderBoardsTab() {
+  for (const tab of boardTabs.children) tab.setAttribute("aria-selected", tab.dataset.level === boardsTab);
+  const entries = boardsCache?.[boardsTab];
+  if (entries) renderBoard($("boardsList"), entries, settings.playerName);
+  else $("boardsList").replaceChildren();
+}
+
+function openBoards() {
+  if (game.level && !game.level.sandbox) boardsTab = game.level.id;
+  renderBoardsTab();
+  $("boardsMsg").textContent = boardsCache ? "" : "Loading…";
+  openOverlay("boards", "boardsClose");
+  fetchBoards().then((boards) => {
+    boardsCache = boards;
+    $("boardsMsg").textContent = "";
+    renderBoardsTab();
+  }).catch((err) => { $("boardsMsg").textContent = err.message; });
 }
 
 // ---------- overlays ----------
@@ -314,6 +426,9 @@ $("menuMouseBtn").addEventListener("click", () => play(game.levelIndex ?? firstU
 $("menuBtn").addEventListener("click", openMenu);
 $("helpBtn").addEventListener("click", () => openOverlay("help", "helpClose"));
 $("helpClose").addEventListener("click", () => closeOverlay("help"));
+$("boardsBtn").addEventListener("click", openBoards);
+$("menuBoardsBtn").addEventListener("click", openBoards);
+$("boardsClose").addEventListener("click", () => closeOverlay("boards"));
 $("restartBtn").addEventListener("click", () => { grabSource = null; game.restart(); });
 $("winReplay").addEventListener("click", () => { closeOverlay("winModal"); grabSource = null; game.restart(); });
 $("winMenu").addEventListener("click", openMenu);
@@ -334,17 +449,21 @@ muteBtn.addEventListener("click", () => {
 });
 applyMute();
 
-// Click on the dark backdrop closes help (not the menu or win screen, which need a choice)
-$("help").addEventListener("click", (e) => { if (e.target.id === "help") closeOverlay("help"); });
+// Click on the dark backdrop closes help and leaderboards (not the menu or win screen, which need a choice)
+for (const id of ["help", "boards"]) {
+  $(id).addEventListener("click", (e) => { if (e.target.id === id) closeOverlay(id); });
+}
 
 document.addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const key = e.key.toLowerCase();
+  if (e.target instanceof HTMLInputElement && key !== "escape") return; // typing a name
   if (key === "escape") {
     if (isOpen("help")) closeOverlay("help");
+    else if (isOpen("boards")) closeOverlay("boards");
     else if (isOpen("menu")) { if (game.level) closeOverlay("menu"); }
     else openMenu();
-  } else if (isOpen("menu") || isOpen("help")) {
+  } else if (isOpen("menu") || isOpen("help") || isOpen("boards")) {
     return;
   } else if (key === "r") {
     closeOverlay("winModal");
@@ -354,6 +473,8 @@ document.addEventListener("keydown", (e) => {
     muteBtn.click();
   } else if (key === "h") {
     openOverlay("help", "helpClose");
+  } else if (key === "l") {
+    openBoards();
   }
 });
 

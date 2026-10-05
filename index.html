@@ -20,6 +20,7 @@
       <div class="hud">
         <span id="timer" class="pill" title="Starts on your first grab">⏱ 0.0s</span>
         <button id="camBtn" class="pill btn-pill" title="Turn hand tracking on/off">📷 Use hand</button>
+        <button id="boardsBtn" class="icon-btn" title="Leaderboards (L)" aria-label="Leaderboards">🏆</button>
         <button id="muteBtn" class="icon-btn" title="Sound (M)" aria-label="Toggle sound">🔊</button>
         <button id="helpBtn" class="icon-btn" title="How to play (H)" aria-label="How to play">?</button>
       </div>
@@ -61,7 +62,10 @@
         <button id="menuCamBtn" class="primary">📷 Play with my hand</button>
         <button id="menuMouseBtn" class="secondary">🖱️ Play with mouse / touch</button>
       </div>
-      <h2>Levels</h2>
+      <div class="section-head">
+        <h2>Levels</h2>
+        <button id="menuBoardsBtn" class="secondary">🏆 Leaderboards</button>
+      </div>
       <div id="levelGrid" class="level-grid"></div>
       <p class="muted small">🔒 Camera video is processed on your device and never uploaded.</p>
     </div>
@@ -81,7 +85,7 @@
         <li>Face the camera with your palm toward it, about an arm's length away.</li>
         <li>Good lighting helps a lot. Avoid a bright window behind you.</li>
         <li>The blue ring shrinks as you pinch. When it turns solid, you're holding.</li>
-        <li>Keys: <kbd>R</kbd> restart · <kbd>Esc</kbd> levels · <kbd>M</kbd> sound · <kbd>H</kbd> help</li>
+        <li>Keys: <kbd>R</kbd> restart · <kbd>Esc</kbd> levels · <kbd>M</kbd> sound · <kbd>H</kbd> help · <kbd>L</kbd> leaderboards</li>
       </ul>
       <button id="helpClose" class="primary">Got it!</button>
     </div>
@@ -94,10 +98,34 @@
       <div id="winStars" class="stars"></div>
       <p id="winTime" class="big"></p>
       <p id="winBest" class="muted"></p>
+      <div class="board">
+        <h3>🏆 Top 5</h3>
+        <ol id="winBoardList" class="board-list"></ol>
+        <form id="nameForm" class="name-form" hidden>
+          <input id="nameInput" maxlength="16" placeholder="Your name" autocomplete="nickname"
+                 enterkeyhint="send" aria-label="Your name for the leaderboard" />
+          <button id="nameSubmit" type="submit" class="primary">Submit</button>
+        </form>
+        <p id="boardMsg" class="muted small" role="status" aria-live="polite"></p>
+      </div>
       <div class="start-row">
         <button id="winReplay" class="secondary">↺ Replay</button>
         <button id="winMenu" class="secondary">☰ Levels</button>
         <button id="winNext" class="primary">Next level →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Leaderboards -->
+  <section id="boards" class="overlay" hidden aria-label="Leaderboards">
+    <div class="card">
+      <h2>🏆 Leaderboards</h2>
+      <p class="muted">The 5 fastest times on each level. Finish a level to get on the board.</p>
+      <div id="boardTabs" class="tabs" role="tablist" aria-label="Level"></div>
+      <ol id="boardsList" class="board-list"></ol>
+      <p id="boardsMsg" class="muted small" role="status" aria-live="polite"></p>
+      <div class="start-row">
+        <button id="boardsClose" class="primary">Close</button>
       </div>
     </div>
   </section>

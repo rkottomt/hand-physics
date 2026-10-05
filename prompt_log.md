@@ -43,3 +43,16 @@ _(Fill in.)_
 
 ## What I changed myself
 _(Fill in. Easy, explainable changes: PINCH_ON/PINCH_OFF in js/gesture.js, a level's layout or par time in js/levels.js, colors in style.css.)_
+
+## Session 3: 2026-10-05: Online leaderboard
+**Prompt (verbatim):**
+> connect this to a backend such that we can keep leaderboard for whoever does itf astest. just the top 5 fastest for each level. ppl will have to input their username
+
+**What Claude did:**
+- Added a Vercel serverless function (`api/leaderboard.mjs`) backed by Upstash Redis from the Vercel Marketplace. Each level is a Redis sorted set that keeps only the top 5, with one entry per name.
+- Win screen: shows the level's top 5. A top-5 time gets a name box (the last name is remembered). Added a 🏆 leaderboard overlay with a tab per level.
+- Server-side checks: level, name format, impossible times, and a per-IP rate limit.
+- Added a local dev server that runs the API with an in-memory database, 10 API unit tests, and browser tests for submitting and for the leaderboard being offline.
+
+**Problem Claude spotted while building it:**
+- The game's keyboard shortcuts (R restart, H help, M mute) would have fired while typing a name like "Rohit" on the win screen. Shortcuts are now ignored while typing in a text box, and a browser test types a name containing R, H and M to check this.
