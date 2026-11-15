@@ -2,6 +2,7 @@
 //   { x, y, pinching, ratio, points }   (all coords normalized 0..1 and mirrored)
 // or onFrame(null) when no hand is visible. Nothing ever leaves the browser.
 import { pinchRatio, nextPinch, smooth } from "./gesture.js";
+import { cursorFromLandmarks } from "./logic.js";
 
 const MP_VERSION = "0.10.14";
 const MP_URL = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}`;
@@ -84,7 +85,7 @@ export class HandTracker {
     const ratio = pinchRatio(hand);
     this.pinching = nextPinch(this.pinching, ratio);
     // Cursor = midpoint of thumb tip and index tip. x is mirrored to match the mirrored video.
-    const raw = { x: 1 - (hand[4].x + hand[8].x) / 2, y: (hand[4].y + hand[8].y) / 2 };
+    const raw = cursorFromLandmarks(hand[4], hand[8]);
     this.cursor = smooth(this.cursor, raw);
     this.onFrame({
       ...this.cursor,

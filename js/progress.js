@@ -1,5 +1,7 @@
 // Best results and settings, saved in this browser's localStorage.
 // Wrapped in try/catch because storage can be blocked (private mode, strict settings).
+import { pickBetterResult } from "./logic.js";
+
 const PROGRESS_KEY = "hand-physics-progress-v1";
 const SETTINGS_KEY = "hand-physics-settings-v1";
 
@@ -15,9 +17,10 @@ export function loadProgress() { return read(PROGRESS_KEY); }
 // Keeps the better result: more stars wins, then the faster time.
 export function saveResult(progress, levelId, stars, seconds) {
   const prev = progress[levelId];
-  const isBest = !prev || stars > prev.stars || (stars === prev.stars && seconds < prev.seconds);
+  const kept = pickBetterResult(prev, { stars, seconds });
+  const isBest = kept !== prev;
   if (isBest) {
-    progress[levelId] = { stars, seconds };
+    progress[levelId] = kept;
     write(PROGRESS_KEY, progress);
   }
   return isBest;

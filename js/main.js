@@ -5,6 +5,7 @@ import { LEVELS } from "./levels.js";
 import { WIDTH, HEIGHT } from "./constants.js";
 import { HandTracker } from "./hand.js";
 import { coverMap } from "./gesture.js";
+import { handFrameStep, initialHandState } from "./logic.js";
 import { drawOverlay } from "./overlay.js";
 import { sfx, setMuted, unlockAudio } from "./audio.js";
 import { loadProgress, saveResult, loadSettings, saveSettings } from "./progress.js";
@@ -119,44 +120,37 @@ const tracker = new HandTracker(video, onHandFrame);
 const camBtn = $("camBtn");
 const handStatus = $("handStatus");
 let camState = "off";        // off | starting | on
-let wasPinching = false;
-let pinchStartedAt = 0;
-let handLostAt = null;
+let handState = initialHandState();
 
 function onHandFrame(frame) {
   const now = performance.now();
   if (!frame) {
     // Brief tracking dropouts are common; only let go after a short grace period.
-    handLostAt ??= now;
-    if (now - handLostAt > 250) {
+    const step = handFrameStep(handState, null, now);
+    handState = step.state;
+    if (step.action === "lost") {
       view.hand = null;
-      wasPinching = false;
       releaseFrom("hand");
     }
     setHandStatus(camState === "on" ? "Looking for your hand…" : "");
     return;
   }
-  handLostAt = null;
 
   const { w, h } = tracker.videoSize;
   const map = (p) => coverMap(p.x, p.y, w, h, WIDTH, HEIGHT);
   const p = map(frame);
   view.hand = { ...p, pinching: frame.pinching, ratio: frame.ratio, points: frame.points.map(map) };
 
-  if (frame.pinching) {
-    if (!wasPinching) {
-      pinchStartedAt = now;
-      tryGrab(p.x, p.y, "hand");
-    } else if (grabSource === "hand") {
-      game.moveGrab(p.x, p.y);
-    } else if (!game.heldBody() && now - pinchStartedAt < 300 && game.canReach(p.x)) {
-      // Forgiving: pinching just before reaching a shape still picks it up.
-      tryGrab(p.x, p.y, "hand");
-    }
-  } else if (wasPinching) {
-    releaseFrom("hand");
-  }
-  wasPinching = frame.pinching;
+  const step = handFrameStep(handState, {
+    pinching: frame.pinching,
+    holdingWithHand: grabSource === "hand",
+    somethingHeld: !!game.heldBody(),
+    canReach: game.canReach(p.x),
+  }, now);
+  handState = step.state;
+  if (step.action === "grab") tryGrab(p.x, p.y, "hand");
+  else if (step.action === "move") game.moveGrab(p.x, p.y);
+  else if (step.action === "release") releaseFrom("hand");
   setHandStatus(grabSource === "hand" ? "Holding" : frame.pinching ? "Pinching" : "Hand found: pinch to grab");
 }
 
