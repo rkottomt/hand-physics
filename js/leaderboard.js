@@ -31,5 +31,5 @@ export function submitTime(levelId, name, seconds) {
 }
 
 export function qualifies(entries, seconds) {
-  return entries.length < TOP_N || seconds < entries[entries.length - 1].seconds;
+  return entries.length < TOP_N || seconds <= entries[entries.length - 1].seconds;
 }
