@@ -3,7 +3,7 @@
 
 // Pinch = thumb tip and index tip close together. Two thresholds (hysteresis) stop
 // the grab from flickering on/off when the fingers hover right at the boundary.
-export const PINCH_ON = 0.35;
+export const PINCH_ON = 0.36;
 export const PINCH_OFF = 0.5;
 
 function dist(a, b) {
