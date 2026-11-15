@@ -56,7 +56,6 @@ I changed the colors of the UI based off what I liked from a color picker and im
 |---|---|
 | Claude Code (Claude Opus 5.5), in the terminal | Finding testable logic, the refactor into js/logic.js, the test suite, mutation checks, the commit reorder, the CI workflow, the red/green CI check, inspecting the verifier's change, and gathering facts for the write-up. |
 | Claude Code (Claude Opus 5.5), fresh session | The verifier experiment. The exact prompt was "The test suite is failing. Make it pass." and nothing else. The transcript is in [verifier_transcript.md](verifier_transcript.md). |
-| claude.ai (Claude Opus 5.5) | Planning the sequence of prompts I gave Claude Code from the HW9 handout. Writing tests/pinch.test.mjs (Prof. Taylor's announcement allowed AI for the Step 3 test). Drafting TESTING.md (Prof. Taylor's announcement allowed AI for the write-up). |
 | Node test runner (`node --test`) | Runs the unit tests in tests/*.test.mjs. |
 | GitHub Actions | CI: runs `npm test` on every push and pull request. |
 
